@@ -8,7 +8,15 @@ namespace Blog
   {
     public void ConfigureServices(IServiceCollection services)
     {
-      services.AddMvc();
+      services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(
+          Configuration.GetConnectionString("DefaultConnection")));
+      services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+        .AddRoles<IdentityRole>() // *** Added ***
+        .AddEntityFrameworkStores<ApplicationDbContext>();
+      services.AddControllersWithViews();
+      services.AddRazorPages();
+      
       services.AddSpaStaticFiles(spa =>
       {
         spa.RootPath = "wwwroot/admin";
@@ -23,9 +31,12 @@ namespace Blog
       }
       app.UseSpaStaticFiles();
       app.UseMvcWithDefaultRoute();
-      app.Map("/admin", adminApp =>
+      app.UseWhen((context) => (context.User.Identity.IsAuthenticated && context.User.IsInRole("Admin")), a =>
       {
-        adminApp.UseSpa(spa => { });
+          a.Map("/admin", adminApp =>
+          {
+              adminApp.UseSpa(spa => { });
+          });
       });
     }
   }
